@@ -4,12 +4,15 @@
 #include <string>
 #include <cstdlib>
 #include <vector>
-
+#include <chrono>
 using namespace std;
 using namespace Eigen;
 
-typedef Eigen::SparseMatrix<double> SpMat;
 typedef Eigen::Triplet<double> T;
+using std::chrono::high_resolution_clock;
+using std::chrono::duration_cast;
+using std::chrono::duration;
+using std::chrono::milliseconds;
 
 int main(int argc, char** argv){
 
@@ -61,17 +64,31 @@ int main(int argc, char** argv){
 	// solve the system
 	VectorXd b(n), x(n);
 	for (i = 0; i < n; i++){
-		b[i] = 0;
+		b[i] = 1;
 		x[i] = -1;
 	}
 	SparseLU<SparseMatrix<double>, COLAMDOrdering<int> > solver;
 	//initialization: columns reordering and A factorization
+	auto t1 = high_resolution_clock::now();
 	solver.analyzePattern(M); 
 	// Compute the numerical factorization 
 	solver.factorize(M); 
+	auto t2 = high_resolution_clock::now();
+	auto t = duration_cast<milliseconds>(t2 - t1);
+	cout << "Initialization time: " << t.count() << " ms" << endl;
 	// Use the factors to solve the linear system 
+	t1 = high_resolution_clock::now();
 	x = solver.solve(b);
-	cout << x[0] << endl;
+	t2 = high_resolution_clock::now();
+	t = duration_cast<milliseconds>(t2 - t1);
+	cout << "Execution time: " << t.count() << " ms" << endl;
+	// calculate l2-norm of the residual
+	VectorXd res(n);
+	res = M * x - b;
+	cout << "Residual norm: " << res.norm() << endl;
+	free(IA);
+	free(JA);
+	free(A);
 	return 0;
 
 
